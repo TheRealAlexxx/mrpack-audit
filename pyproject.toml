@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mrpack-audit"
+version = "0.1.0"
+description = "Audit a Modrinth modpack or mods folder for licence and provenance risk"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+[project.scripts]
+mrpack-audit = "mrpack_audit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
