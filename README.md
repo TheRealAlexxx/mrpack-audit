@@ -54,3 +54,14 @@ Needs attention:
 ## Licence
 
 MIT
+
+## Development
+
+Run the tests against a checkout (src layout, so an editable install first):
+
+```
+pip install -e . pytest
+python -m pytest tests/ -q
+```
+
+Currently 32 tests, all offline: Modrinth API calls are faked.

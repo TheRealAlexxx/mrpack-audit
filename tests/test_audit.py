@@ -129,10 +129,21 @@ def test_zip_without_index_is_a_clean_error(tmp_path):
         collect_entries(pack)
 
 
-def test_index_with_null_files_is_a_clean_scan(tmp_path):
+def test_index_with_null_files_is_a_clean_error(tmp_path):
+    # "files": null is a malformed pack, not an empty one - fail loudly
+    # instead of reporting "no jars found" with rc 0 (false success).
+    import pytest
     pack = tmp_path / "nullfiles.mrpack"
     with zipfile.ZipFile(pack, "w") as z:
         z.writestr("modrinth.index.json", json.dumps({"files": None}))
+    with pytest.raises(ValueError, match="'files' must be a list"):
+        collect_entries(pack)
+
+
+def test_index_with_empty_files_is_a_clean_scan(tmp_path):
+    pack = tmp_path / "emptyfiles.mrpack"
+    with zipfile.ZipFile(pack, "w") as z:
+        z.writestr("modrinth.index.json", json.dumps({"files": []}))
     assert collect_entries(pack) == []
 
 

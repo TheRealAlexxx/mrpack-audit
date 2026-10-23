@@ -58,6 +58,13 @@ def collect_entries(target: str | Path) -> list[tuple[str, str, str | None]]:
                     raise ValueError(
                         f"modrinth.index.json is not valid JSON: {exc}"
                     ) from exc
+                # an explicit "files": null (or other non-list) is a malformed
+                # pack, not an empty one; a missing key is tolerated
+                if "files" in index and not isinstance(index["files"], list):
+                    raise ValueError(
+                        "modrinth.index.json 'files' must be a list, got %s"
+                        % type(index["files"]).__name__
+                    )
                 for entry in index.get("files") or []:
                     file_hashes = entry.get("hashes", {})
                     sha1 = file_hashes.get("sha1")
