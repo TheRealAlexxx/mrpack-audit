@@ -35,17 +35,30 @@ def collect_entries(target: str | Path) -> list[tuple[str, str, str | None]]:
                 entries.append((str(f.relative_to(p)), h["sha1"], h["sha512"]))
         return entries
     if p.suffix == ".mrpack":
-        with zipfile.ZipFile(p) as z:
+        try:
+            archive = zipfile.ZipFile(p)
+        except zipfile.BadZipFile as exc:
+            raise ValueError(f"{p} is not a valid .mrpack (zip) file") from exc
+        with archive as z:
             names = set(z.namelist())
             indexed: set[str] = set()
+            if "modrinth.index.json" not in names:
+                raise ValueError(
+                    f"{p} has no modrinth.index.json - not a Modrinth pack"
+                )
             if "modrinth.index.json" in names:
                 info = z.getinfo("modrinth.index.json")
                 if info.file_size > 64 << 20:
                     raise ValueError(
                         f"modrinth.index.json is implausibly large: {info.file_size} bytes"
                     )
-                index = json.loads(z.read("modrinth.index.json"))
-                for entry in index.get("files", []):
+                try:
+                    index = json.loads(z.read("modrinth.index.json"))
+                except json.JSONDecodeError as exc:
+                    raise ValueError(
+                        f"modrinth.index.json is not valid JSON: {exc}"
+                    ) from exc
+                for entry in index.get("files") or []:
                     file_hashes = entry.get("hashes", {})
                     sha1 = file_hashes.get("sha1")
                     if sha1:

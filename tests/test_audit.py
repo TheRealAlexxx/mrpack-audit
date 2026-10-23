@@ -110,3 +110,36 @@ def test_zip_bomb_member_rejected(tmp_path, monkeypatch):
     )
     with pytest.raises(ValueError, match="exceeds"):
         collect_entries(pack)
+
+
+def test_non_zip_mrpack_is_a_clean_error(tmp_path):
+    import pytest
+    pack = tmp_path / "fake.mrpack"
+    pack.write_bytes(b"this is not a zip")
+    with pytest.raises(ValueError, match="not a valid .mrpack"):
+        collect_entries(pack)
+
+
+def test_zip_without_index_is_a_clean_error(tmp_path):
+    import pytest
+    pack = tmp_path / "plain.mrpack"
+    with zipfile.ZipFile(pack, "w") as z:
+        z.writestr("mods/a.jar", b"jar")
+    with pytest.raises(ValueError, match="no modrinth.index.json"):
+        collect_entries(pack)
+
+
+def test_index_with_null_files_is_a_clean_scan(tmp_path):
+    pack = tmp_path / "nullfiles.mrpack"
+    with zipfile.ZipFile(pack, "w") as z:
+        z.writestr("modrinth.index.json", json.dumps({"files": None}))
+    assert collect_entries(pack) == []
+
+
+def test_index_with_invalid_json_is_a_clean_error(tmp_path):
+    import pytest
+    pack = tmp_path / "badjson.mrpack"
+    with zipfile.ZipFile(pack, "w") as z:
+        z.writestr("modrinth.index.json", b"{not json")
+    with pytest.raises(ValueError, match="not valid JSON"):
+        collect_entries(pack)
