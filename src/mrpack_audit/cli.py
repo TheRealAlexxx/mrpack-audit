@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from .audit import audit
 from .modrinth import ModrinthClient
@@ -23,6 +24,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Exit 1 if any file is restricted, unknown, or unmatched",
     )
     args = parser.parse_args(argv)
+
+    if not Path(args.target).exists():
+        print(f"error: no such file or directory: {args.target}", file=sys.stderr)
+        return 2
 
     client = ModrinthClient()
     try:
