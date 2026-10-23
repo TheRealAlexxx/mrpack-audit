@@ -7,7 +7,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from .hashing import hashes_for, hashes_for_bytes
+from .hashing import hashes_for, hashes_for_bytes, hashes_for_member
 from .licenses import classify
 
 SCAN_SUFFIXES = (".jar", ".zip")
@@ -39,6 +39,11 @@ def collect_entries(target: str | Path) -> list[tuple[str, str, str | None]]:
             names = set(z.namelist())
             indexed: set[str] = set()
             if "modrinth.index.json" in names:
+                info = z.getinfo("modrinth.index.json")
+                if info.file_size > 64 << 20:
+                    raise ValueError(
+                        f"modrinth.index.json is implausibly large: {info.file_size} bytes"
+                    )
                 index = json.loads(z.read("modrinth.index.json"))
                 for entry in index.get("files", []):
                     file_hashes = entry.get("hashes", {})
@@ -52,7 +57,7 @@ def collect_entries(target: str | Path) -> list[tuple[str, str, str | None]]:
                 if name.endswith("/") or name in indexed:
                     continue
                 if name.lower().endswith(SCAN_SUFFIXES):
-                    h = hashes_for_bytes(z.read(name))
+                    h = hashes_for_member(z, name)
                     entries.append((name, h["sha1"], h["sha512"]))
         return entries
     raise ValueError(f"target must be a directory or .mrpack file: {target}")

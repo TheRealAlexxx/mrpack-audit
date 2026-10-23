@@ -92,3 +92,21 @@ def test_collect_entries_rejects_bad_target(tmp_path):
         assert False, "should raise"
     except ValueError:
         pass
+
+
+def test_zip_bomb_member_rejected(tmp_path, monkeypatch):
+    import pytest
+    import mrpack_audit.audit as audit_mod
+    import mrpack_audit.hashing as hashing
+    pack = tmp_path / "bomb.mrpack"
+    with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("modrinth.index.json", json.dumps({"files": []}))
+        # highly compressible: inflates far beyond the on-disk size
+        z.writestr("mods/big.jar", b"A" * (2 * 1024 * 1024))
+    # a tiny limit exercises the guard without needing 1 GiB of RAM
+    monkeypatch.setattr(
+        audit_mod, "hashes_for_member",
+        lambda z, name: hashing.hashes_for_member(z, name, limit=1024),
+    )
+    with pytest.raises(ValueError, match="exceeds"):
+        collect_entries(pack)
